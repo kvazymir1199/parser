@@ -26,7 +26,7 @@ async def get_html(url: str) -> str:
 
 async def get_data(url) -> list | None:
     """Parse html document and return list if quotes objects if page have quotes"""
-    async with asyncio.Semaphore(URL_PER_TIME):w
+    async with asyncio.Semaphore(URL_PER_TIME):
         html = await get_html(url)
         data = BeautifulSoup(html, 'html.parser').find_all(class_='quote')
         if not data:
