@@ -1,35 +1,17 @@
 import json
-from dataclasses import asdict, dataclass
+from dataclasses import asdict
 from typing import Generator
 
 import aiohttp
-from bs4 import BeautifulSoup, ResultSet
-
+from bs4 import BeautifulSoup
 import asyncio
+
+from parser import gather_quotes
 
 URL = 'https://quotes.toscrape.com'
 
 URL_PER_TIME = 10
 MAX_PAGES = 50
-
-
-@dataclass
-class Author:
-    name: str
-    url: str
-
-
-@dataclass
-class Tag:
-    tag_name: str
-    tag_url: str
-
-
-@dataclass
-class Quote:
-    text: str
-    author: Author
-    tags: list[Tag]
 
 
 async def get_html(url: str) -> str:
@@ -42,40 +24,17 @@ async def get_html(url: str) -> str:
                 print("For some reason server not reachable. Come back later")
 
 
-async def gather_quotes(quotes: ResultSet) -> list[Quote] | None:
-    """Gather quotes from parsed html document"""
-    results = []
-    for quote in quotes:
-        results.append(
-            Quote(
-                text=quote.find('span', class_='text').text.strip(),
-                author=Author(
-                    name=quote.find('small', class_='author').text.strip(),
-                    url=URL + quote.find('span', class_='').find('a')['href']
-                ),
-                tags=[
-                    Tag(
-                        tag_name=tag.text.strip(),
-                        tag_url=URL + tag.get("href")
-                    ) for tag in quote.find_all('a', class_='tag')
-                ]
-            )
-        )
-
-    return results
-
-
-async def get_data(url) -> list[Quote] | None:
+async def get_data(url) -> list | None:
     """Parse html document and return list if quotes objects if page have quotes"""
-    async with asyncio.Semaphore(URL_PER_TIME):
+    async with asyncio.Semaphore(URL_PER_TIME):w
         html = await get_html(url)
         data = BeautifulSoup(html, 'html.parser').find_all(class_='quote')
         if not data:
             return None
-        return await gather_quotes(data)
+        return await gather_quotes(data, url)
 
 
-def save_to_json(data: list[Quote]):
+def save_to_json(data: list):
     """Save data to json file"""
     try:
         with open('collected_data.json', 'w') as f:
@@ -104,6 +63,11 @@ async def main():
             data.extend(item)
 
     save_to_json(data)
-if __name__ == '__main__':
-    asyncio.run(main())
 
+
+if __name__ == '__main__':
+    import time
+
+    start_time = time.time()
+    asyncio.run(main())
+    print("--- %s seconds ---" % (time.time() - start_time))
